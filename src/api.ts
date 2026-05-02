@@ -79,3 +79,9 @@ export const deleteMessage = async (id: string): Promise<void> => {
 export const deleteAllMessages = async (): Promise<void> => {
   await api.delete('/api/v1/messages');
 };
+
+export const getEventSource = (): EventSource => {
+  const baseUrl = getApiUrl();
+  const eventUrl = baseUrl === '/' ? '/api/v1/events' : `${baseUrl}/api/v1/events`;
+  return new EventSource(eventUrl);
+};

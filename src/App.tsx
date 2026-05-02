@@ -20,6 +20,7 @@ import {
   searchMessages,
   setApiUrl,
   getApiUrl,
+  getEventSource,
   type Message
 } from './api';
 import { decodeMimeHeader } from './utils';
@@ -61,6 +62,46 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
+
+  useEffect(() => {
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    const es = getEventSource();
+    
+    es.onmessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data) as Message;
+        
+        // Show notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const subject = decodeMimeHeader(msg.Content.Headers.Subject?.[0] || '(No Subject)');
+          const from = `${msg.From.Mailbox}@${msg.From.Domain}`;
+          new Notification('New Email Received', {
+            body: `From: ${from}\nSubject: ${subject}`,
+            icon: '/favicon.svg'
+          });
+        }
+        
+        // Refresh messages
+        fetchMessages(searchQuery);
+      } catch (err) {
+        console.error('Failed to parse event data:', err);
+      }
+    };
+
+    es.onerror = (err: Event) => {
+      console.error('EventSource error:', err);
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [fetchMessages, searchQuery, apiUrlInput]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
